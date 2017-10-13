@@ -16,7 +16,7 @@ from keras.preprocessing import image
 import numpy as np
 import tensorflow as tf
 
-from dlutils import plot_image_batch_w_labels
+# from dlutils import plot_image_batch_w_labels
 
 from utils.image_history_buffer import ImageHistoryBuffer
 
@@ -28,6 +28,13 @@ from utils.image_history_buffer import ImageHistoryBuffer
 path = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join('..', 'input')
 cache_dir = os.path.join(path, 'cache')
+
+#
+# load training data
+#
+
+syn_image_stack = np.load("../syn.npy")
+real_image_stack = np.load("../syn.npy")
 
 #
 # image dimensions
@@ -176,32 +183,32 @@ def adversarial_training(synthesis_eyes_dir, mpii_gaze_dir, refiner_model_path=N
     datagen = image.ImageDataGenerator(
         preprocessing_function=applications.xception.preprocess_input)
 
-    flow_from_directory_params = {'target_size': (img_height, img_width),
-                                  'color_mode': 'grayscale' if img_channels == 1 else 'rgb',
-                                  'class_mode': None,
-                                  'batch_size': batch_size}
-
-    synthetic_generator = datagen.flow_from_directory(
-        directory=synthesis_eyes_dir,
-        **flow_from_directory_params
-    )
-
-    real_generator = datagen.flow_from_directory(
-        directory=mpii_gaze_dir,
-        **flow_from_directory_params
-    )
-
-    # flow_params = {'batch_size': batch_size}
+    # flow_from_directory_params = {'target_size': (img_height, img_width),
+    #                               'color_mode': 'grayscale' if img_channels == 1 else 'rgb',
+    #                               'class_mode': None,
+    #                               'batch_size': batch_size}
     #
-    # synthetic_generator = datagen.flow(
-    #     x=syn_image_stack,
-    #     **flow_params
+    # synthetic_generator = datagen.flow_from_directory(
+    #     directory=synthesis_eyes_dir,
+    #     **flow_from_directory_params
     # )
     #
-    # real_generator = datagen.flow(
-    #     x=real_image_stack,
-    #     **flow_params
+    # real_generator = datagen.flow_from_directory(
+    #     directory=mpii_gaze_dir,
+    #     **flow_from_directory_params
     # )
+
+    flow_params = {'batch_size': batch_size}
+
+    synthetic_generator = datagen.flow(
+        x=syn_image_stack,
+        **flow_params
+    )
+
+    real_generator = datagen.flow(
+        x=real_image_stack,
+        **flow_params
+    )
 
     def get_image_batch(generator):
         """keras generators may generate an incomplete batch for the last batch"""
@@ -233,10 +240,10 @@ def adversarial_training(synthesis_eyes_dir, mpii_gaze_dir, refiner_model_path=N
                 print('Saving batch of refined images during pre-training at step: {}.'.format(i))
 
                 synthetic_image_batch = get_image_batch(synthetic_generator)
-                plot_image_batch_w_labels.plot_batch(
-                    np.concatenate((synthetic_image_batch, refiner_model.predict_on_batch(synthetic_image_batch))),
-                    os.path.join(cache_dir, figure_name),
-                    label_batch=['Synthetic'] * batch_size + ['Refined'] * batch_size)
+                # plot_image_batch_w_labels.plot_batch(
+                #     np.concatenate((synthetic_image_batch, refiner_model.predict_on_batch(synthetic_image_batch))),
+                #     os.path.join(cache_dir, figure_name),
+                #     label_batch=['Synthetic'] * batch_size + ['Refined'] * batch_size)
 
                 print('Refiner model self regularization loss: {}.'.format(gen_loss / log_interval))
                 gen_loss = np.zeros(shape=len(refiner_model.metrics_names))
@@ -311,10 +318,10 @@ def adversarial_training(synthesis_eyes_dir, mpii_gaze_dir, refiner_model_path=N
             print('Saving batch of refined images at adversarial step: {}.'.format(i))
 
             synthetic_image_batch = get_image_batch(synthetic_generator)
-            plot_image_batch_w_labels.plot_batch(
-                np.concatenate((synthetic_image_batch, refiner_model.predict_on_batch(synthetic_image_batch))),
-                os.path.join(cache_dir, figure_name),
-                label_batch=['Synthetic'] * batch_size + ['Refined'] * batch_size)
+            # plot_image_batch_w_labels.plot_batch(
+            #     np.concatenate((synthetic_image_batch, refiner_model.predict_on_batch(synthetic_image_batch))),
+            #     os.path.join(cache_dir, figure_name),
+            #     label_batch=['Synthetic'] * batch_size + ['Refined'] * batch_size)
 
             # log loss summary
             print('Refiner model loss: {}.'.format(combined_loss / (log_interval * k_g * 2)))
